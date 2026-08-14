@@ -1,6 +1,6 @@
 const express = require("express");
 const db = require("./db");
-const core = require("cors");
+const cors = require("cors");
 const app = express();
 const PORT = 3000;
 
@@ -14,7 +14,7 @@ app.get("/", (req, res) => {
 // GET /students - returns all students from mysql
 app.get("/students", (req, res) => {
     const sql = "SELECT * FROM students";
-    bd.query(sql, (error, results) => {
+    db.query (sql, (error, results) => {
         if(error){
             console.error("error getting students:", error);
             return res.status(500).json({error: "failed to get students"});
@@ -24,7 +24,7 @@ app.get("/students", (req, res) => {
 });
 
 // GET /classes - return all classes from sql
-app.get("./classes", (req, res) => {
+app.get("/classes", (req, res) => {
     const sql = "SELECT * FROM classes";
     db.query(sql, (error, results) => {
         if(error){
@@ -36,3 +36,36 @@ app.get("./classes", (req, res) => {
 });
 
 // GET /enrollments - returns joined data(student_name + class_name)
+app.get("/enrollments", (req, res) => {
+    const sql = "SELECT students.first_name, students.last_name, classes.class_name, classes.teacher_name FROM enrollments JOIN students ON enrollments.student_id = students.id JOIN classes ON enrollments.class_id = classes.id";
+    db.query(sql, (error, results) => {
+        if(error){
+            console.error("error getting enrollments:", error);
+            return res.status(500).json({error: "failed to get enrollments:"});
+        }
+        res.json(results);
+    });
+});
+
+// GET /students/:id - returns one student by id
+app.get("/students/:id", (req, res) => {
+    const {id} = req.params;
+    const sql = "SELECT * FROM students WHERE id = ?";
+    db.query(sql, [id], (error, results) => {
+        if(error){
+            console.error("error getting students:", error);
+            return res.status(500).json({error: "failed to get student:"});
+        }
+        if(results.length === 0){
+            return res.status(404).json({error: "student not found"});
+        }
+        res.json(results[0]);
+    });
+});
+
+// GET /students/:id/grades - returns grades from one student
+
+
+app.listen(PORT, () => {
+    console.log(`server running at http://localhost:${PORT}`);
+});
