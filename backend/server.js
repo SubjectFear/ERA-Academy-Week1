@@ -23,6 +23,37 @@ app.get("/students", (req, res) => {
     });
 });
 
+// POST /students - receives new student data and inserts it into mysql
+app.post("/students", (req, res) => {
+    const {first_name, last_name, grade_level} = req.body;
+
+    // VALIDATION - reject if any field is missing
+    if(!first_name || !last_name || !grade_level) {
+        return res.status(400).json({error: "First Name, Last Name and Grade Level are Required"});
+    }
+    const sql = "INSERT INTO students(first_name, Last_name, grade_level) VALUE(?, ?, ?)";
+    db.query(sql, [first_name, last_name, grade_level], (error, results) => {
+        if(error){
+            console.error("Error Adding Students:", error);
+            return res.status(500).json({error: "Failed to Add Student"});
+        }
+        res.status(201).json({message: "Student Added Succefully", studentID: results.insertID});
+    });
+});
+
+// GET /students/:id/assignments
+app.get("/students/:id/assignments", (req, res) => {
+    const {id} = req.params;
+    const sql = "SELECT assignments.assignment_name, assignments.due_date, assignments.max_points, student_assignments.score, student_assignments.submitted_date, classes.class_name FROM assignments JOIN classes ON assignments.class_id = classes.id LEFT JOIN student_assignments ON student_assignments.assignment_id = assignments.id AND student_assignments.student_id = ? WHERE assignments.class_id IN (SELECT class_id FROM enrollments WHERE student_id = ?)";
+    db.query(sql, [id, id], (error, results) => {
+        if(error){
+            console.error("error getting assignments:", error);
+            return res.status(500).json({error: "Failed to get Assignments"});
+        }
+        res.json(results);
+    });
+});
+
 // GET /classes - return all classes from sql
 app.get("/classes", (req, res) => {
     const sql = "SELECT * FROM classes";
@@ -64,7 +95,30 @@ app.get("/students/:id", (req, res) => {
 });
 
 // GET /students/:id/grades - returns grades from one student
+app.get("/students/:id/grades", (req, res) => {
+    const {id} = req.params;
+    const sql = "SELECT classes.class_name, grades.grade_value FROM grades JOIN classes ON grades.class_id = classes.id WHERE grades.student_id = ?";
+    db.query(sql, [id], (error, results) => {
+        if(error){
+            console.error("error getting students:", error);
+            return res.status(500).json({error: "failed to get grades:"});
+        }
+        res.json(results);
+    });
+});
 
+// GET /students/:id/attendance - returns attendance from one student\
+app.get("/students/:id/attendance", (req, res) => {
+    const {id} = req.params;
+    const sql = "SELECT classes.class_name, attendance.date, attendance.status FROM attendance JOIN classes ON attendance.class_id = classes.id WHERE attendance.student_id = ? ORDER BY attendance.date DESC";
+    db.query(sql, [id], (error, results) => {
+        if(error){
+            console.error("error getting attendance:", error);
+            return res.status(500).json({error: "failed to get attendance:"});
+        }
+        res.json(results);
+    });
+});
 
 app.listen(PORT, () => {
     console.log(`server running at http://localhost:${PORT}`);
