@@ -70,6 +70,15 @@ app.post("/users", (req, res) => {
     });
 });
 
+app.get('/users', (req, res) => {
+  const sql = 'SELECT id, first_name, last_name, email FROM users';
+  db.query(sql, (error, results) => {
+    if (error) return res.status(500).json({ error: 'Failed to get users' });
+    res.json(results);
+  });
+});
+
+
 // POST /login - checks email and password against the user table
 app.post("/login", (req, res) => {
     const {email, password} = req.body;
