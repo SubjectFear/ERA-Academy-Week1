@@ -41,6 +41,79 @@ app.post("/students", (req, res) => {
     });
 });
 
+// POST /users - creates a new user account
+app.post("/users", (req, res) => {
+    const {first_name, last_name, email, password} = req.body;
+    if(!first_name || !last_name || !email || !password) {
+        return res.status(400).json({error: "fist name, last name, email, and password are required"});
+    }
+    if(passwprd.length < 8) {
+        return res.status(400).json({error: "password must be at least 8 characters long"});
+    }
+    const specialChar = /[!@#$%]/;
+    if(!specialChar.test(password)) {
+        return res.status(400).json({error: "password must include at least one special character: !@#$%"});
+    }
+    // auto-link to students table by matching first and last name
+    const findStudent = "SELECT id FROM students WHERE first_name = ? AND last_name = ?";
+    db.query(findStudent, [first_name, last_name], (err, students) => {
+        if(err) return res.status(500).json({error: "failed to create user"});
+        const student_id = students.length > 0 ? students[0].id : null;
+        const sql = "INSERT INTO users(first_name, last_name, email, password, student_id) VALUES (?, ?, ?, ?, ?)";
+        db.query(sql, [first_name, last_name, email, password, student_is], (error, results) => {
+            if(error) {
+                console.error("error creating user:", error);
+                return res.status(500).json({error: "failed to create user"});
+            }
+            res.status(201).json({message: "user created successfully", userId: results.insertId, student_id: student_id});
+        });
+    });
+});
+
+// POST /login - checks email and password against the user table
+app.post("/login", (req, res) => {
+    const {email, password} = req.body;
+    if(!email || !password) {
+        return res.status(400).json({
+            error: "email and password are required"
+        });
+    }
+    if(password.length < 8){
+        return res.status(400).json({
+            error: "password must be at least 8 characters long"
+        });
+    }
+    const specialChar = /[!@#$%]/;
+    if(!specialChar.test(password)){
+        return res.status(400).json({error: "password must include at least one special character: !@#$%"});
+    }
+    const sql = "SELECT * FROM users WHERE email = ?";
+    db.query(sql, [email], (error, results) => {
+        if (error){
+            console.error("login query error:", error);
+            return res.status(500).json({
+                error: "Something went wrong :("
+            });
+        }
+    if (results.length === 0){
+        return res.status(401).json({
+            error: "invalid email or password"
+    });
+    }
+    const user = results[0];
+    if (user.password !== password){
+        return res.status(401).json({
+            error: "Invalid email or password"
+        });
+    }
+    // Step 5: Login successful - Return name so front end can update the nav bar
+    res.status(200).json({
+        message: "Login successful", first_name: user.first_name, last_name: user.last_name, student_id: user.student_id
+    });
+    });
+});
+
+
 // GET /students/:id/assignments
 app.get("/students/:id/assignments", (req, res) => {
     const {id} = req.params;
